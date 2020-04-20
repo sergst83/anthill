@@ -3,12 +3,12 @@ package ru.sergst.anthill.entities;
 import lombok.Getter;
 import ru.sergst.anthill.config.Constants;
 
-import javax.swing.JPanel;
-import javax.swing.Timer;
+import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.Rectangle2D;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -25,6 +25,8 @@ import static ru.sergst.anthill.config.Constants.entityHeight;
 import static ru.sergst.anthill.config.Constants.entityWidth;
 import static ru.sergst.anthill.config.Constants.foodPointsCount;
 import static ru.sergst.anthill.config.Constants.foodsPerAntMultiplier;
+import static ru.sergst.anthill.config.Constants.markRemovePerTick;
+import static ru.sergst.anthill.config.Constants.maxMarkWaight;
 
 @Getter
 public class World extends JPanel implements ActionListener {
@@ -35,6 +37,8 @@ public class World extends JPanel implements ActionListener {
 
     private Map<Class, Set<Entity>> entities = new HashMap<>();
     private Map<Rectangle, Integer> markedAreas = new HashMap<>();
+
+    private int collectedFoods = 0;
 
     public World() {
         init();
@@ -93,11 +97,13 @@ public class World extends JPanel implements ActionListener {
         //resend ant with food
         List<Entity> antsToRemove = entities.get(Ant.class)
                 .stream()
-                .filter(ant -> ant.getBounds().equals(getAntHome()))
+                .filter(ant -> ant.getBounds().intersects(getAntHome()))
                 .filter(ant -> ((Ant)ant).isWithFood())
                 .collect(Collectors.toList());
         for (Entity entity : antsToRemove) {
             entities.get(Ant.class).remove(entity);
+            collectedFoods++;
+            System.out.println("Collected foods: " + collectedFoods);
         }
 
         entities.values()
@@ -105,9 +111,17 @@ public class World extends JPanel implements ActionListener {
                 .flatMap(Collection::stream)
                 .forEach(Entity::compute);
 
-        for (Rectangle key : markedAreas.keySet()) {
-            Integer v = markedAreas.get(key) - Constants.markRemovePerTick;
-            markedAreas.put(key, v);
+        //испарение ферромона
+        if (!markedAreas.isEmpty()) {
+            List<Rectangle> keys = new ArrayList<>(markedAreas.keySet());
+            for (Rectangle key : keys) {
+                int v = Math.max(markedAreas.get(key) - markRemovePerTick, 0);
+                if (v == 0) {
+                    markedAreas.remove(key);
+                } else {
+                    markedAreas.put(key, v);
+                }
+            }
         }
     }
 
@@ -128,6 +142,18 @@ public class World extends JPanel implements ActionListener {
         g.clearRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
         g.setColor(Constants.backGround);
         g.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+        markedAreas.forEach((k, v) -> {
+            int b = 200 - (255 * v) / maxMarkWaight;
+            if (b > 255) {
+                b = 255;
+            } else if (b < 0) {
+                b = 0;
+            }
+            Color color = new Color(255, 255, b); //градауии желтого
+            g.setColor(color);
+            g.fillRect(k.x, k.y, k.width, k.height);
+        });
 
         entities.values()
                 .stream()
