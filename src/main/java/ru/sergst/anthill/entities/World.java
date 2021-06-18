@@ -1,6 +1,7 @@
 package ru.sergst.anthill.entities;
 
 import lombok.Getter;
+import lombok.val;
 import ru.sergst.anthill.config.Constants;
 
 import javax.swing.*;
@@ -8,6 +9,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.Rectangle2D;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -18,25 +20,23 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
-import static ru.sergst.anthill.config.Constants.WORLD_HEIGHT;
-import static ru.sergst.anthill.config.Constants.WORLD_WIDTH;
-import static ru.sergst.anthill.config.Constants.entityHeight;
-import static ru.sergst.anthill.config.Constants.entityWidth;
-import static ru.sergst.anthill.config.Constants.foodPointsCount;
-import static ru.sergst.anthill.config.Constants.foodsPerAntMultiplier;
-import static ru.sergst.anthill.config.Constants.markRemovePerTick;
-import static ru.sergst.anthill.config.Constants.maxMarkWaight;
+import static java.util.stream.Collectors.toList;
+import static ru.sergst.anthill.config.Constants.*;
 
 @Getter
 public class World extends JPanel implements ActionListener {
 
-    Timer timer = new Timer(Constants.delay, this);
+    private final Timer timer = new Timer(delay, this);
 
-    public static Random random = new Random();
+    public static final Random random = new SecureRandom();
 
-    private Map<Class, Set<Entity>> entities = new HashMap<>();
-    private Map<Rectangle, Integer> markedAreas = new HashMap<>();
+    private final Set<Food> foods = new HashSet<>();
+    private final Set<Ant> ants = new HashSet<>();
+    private final List<AntHome> antHomes = new ArrayList<>();
+    private final Map<Rectangle, Integer> markedAreas = new HashMap<>();
 
     private int collectedFoods = 0;
 
@@ -59,7 +59,8 @@ public class World extends JPanel implements ActionListener {
 
     private void initAntHome() {
         Point point = getRandomPont();
-        entities.putIfAbsent(AntHome.class, Collections.singleton(new AntHome(point.x, point.y, entityWidth, entityHeight)));
+        //создаем муравейник
+        antHomes.add(new AntHome(point, entityDimension));
     }
 
     private void initFood() {
@@ -68,18 +69,15 @@ public class World extends JPanel implements ActionListener {
         do {
             food = new Food(point.x, point.y, entityWidth, entityHeight);
         } while (isEntitiesIntersects(food));
-        Set<Entity> foods = entities.getOrDefault(Food.class, new HashSet<>());
-        for (int i = 0; i < Constants.maxAntCount * foodsPerAntMultiplier; i++) {
+        for (int i = 0; i < maxAntCount * foodsPerAntMultiplier; i++) {
             foods.add(food);
         }
-        entities.put(Food.class, foods);
     }
 
     private boolean isEntitiesIntersects(final Entity entity) {
-        return entities.values()
-                .stream()
-                .flatMap(Collection::stream)
-                .anyMatch(e -> e.intersects((Rectangle2D) entity));
+        return foods.stream().anyMatch(food -> food.intersects((Rectangle2D) entity))
+                || antHomes.stream().anyMatch(antHome -> antHome.intersects((Rectangle2D) entity))
+                || ants.stream().anyMatch(ant -> ant.intersects((Rectangle2D) entity));
     }
 
     private Point getRandomPont() {
@@ -90,30 +88,27 @@ public class World extends JPanel implements ActionListener {
     }
 
     private void computeWorldTick() {
-        if (!this.entities.get(Food.class).isEmpty() && this.entities.get(Ant.class).size() < Constants.maxAntCount) {
+        if (!foods.isEmpty() && ants.size() < maxAntCount) {
             initNewAnt();
         }
 
-        //resend ant with food
-        List<Entity> antsToRemove = entities.get(Ant.class)
-                .stream()
+        //получаем список муравьев возле норки с едой
+        val antsToRemove = ants.stream()
                 .filter(ant -> ant.getBounds().intersects(getAntHome()))
                 .filter(ant -> ((Ant)ant).isWithFood())
-                .collect(Collectors.toList());
-        for (Entity entity : antsToRemove) {
-            entities.get(Ant.class).remove(entity);
-            collectedFoods++;
-            System.out.println("Collected foods: " + collectedFoods);
-        }
+                .collect(toList());
+        //удаляем муравьев принесших еду с поля и увеличиваем счетчик еды
+        antsToRemove.forEach(ants::remove);
+        collectedFoods += antsToRemove.size();
+        System.out.println("Collected foods: " + collectedFoods);
 
-        entities.values()
-                .stream()
-                .flatMap(Collection::stream)
-                .forEach(Entity::compute);
+        ants.forEach(Entity::compute);
+        foods.forEach(Entity::compute);
+        antHomes.forEach(Entity::compute);
 
         //испарение ферромона
         if (!markedAreas.isEmpty()) {
-            List<Rectangle> keys = new ArrayList<>(markedAreas.keySet());
+            val keys = new ArrayList<>(markedAreas.keySet());
             for (Rectangle key : keys) {
                 int v = Math.max(markedAreas.get(key) - markRemovePerTick, 0);
                 if (v == 0) {
@@ -126,15 +121,13 @@ public class World extends JPanel implements ActionListener {
     }
 
     private void initNewAnt() {
-        Set<Entity> ants = entities.getOrDefault(Ant.class, new HashSet<>());
-        Ant newAnt = new Ant(getAntHome(), this);
+        val newAnt = new Ant(getAntHome(), this);
         System.out.println(newAnt);
         ants.add(newAnt);
-        entities.put(Ant.class, ants);
     }
 
     private AntHome getAntHome() {
-        return (AntHome) entities.get(AntHome.class).toArray()[0];
+        return antHomes.get(0);
     }
 
     @Override
@@ -155,10 +148,9 @@ public class World extends JPanel implements ActionListener {
             g.fillRect(k.x, k.y, k.width, k.height);
         });
 
-        entities.values()
-                .stream()
-                .flatMap(Collection::stream)
-                .forEach(entity -> entity.draw(g));
+        ants.forEach(evtity -> evtity.draw(g));
+        foods.forEach(evtity -> evtity.draw(g));
+        antHomes.forEach(evtity -> evtity.draw(g));
     }
 
     public boolean isInWorld(int x, int y) {

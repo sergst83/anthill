@@ -3,6 +3,7 @@ package ru.sergst.anthill.entities;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.val;
 
 import java.awt.*;
 import java.util.Arrays;
@@ -17,6 +18,7 @@ import static ru.sergst.anthill.config.Constants.antColor;
 import static ru.sergst.anthill.config.Constants.antWithFoodColor;
 import static ru.sergst.anthill.config.Constants.markWaight;
 import static ru.sergst.anthill.config.Constants.maxMarkWaight;
+import static ru.sergst.anthill.entities.World.random;
 
 @ToString
 @Getter
@@ -26,11 +28,11 @@ public class Ant extends Rectangle implements Entity {
      * Путь из прямоугольников пройденный муравбем от дома, чтобы вернуться назад
      */
     private Stack<Rectangle> path;
-    private World world;
+    private final World world;
     @Setter
     private boolean withFood = false;
-    private AntHome antHome;
-    private int pathLength = 1;
+    private final AntHome antHome;
+    private final int pathLength = 1;
 
     public Ant(AntHome antHome, World world) {
         super(antHome.x, antHome.y, antHome.width, antHome.height);
@@ -92,19 +94,18 @@ public class Ant extends Rectangle implements Entity {
                     .collect(Collectors.toList());
             //если рядом еда - возвращаем пустой следующий шах
             if (possibleNextPositions.stream()
-                    .anyMatch(rectangle -> world.getEntities()
-                            .get(Food.class)
+                    .anyMatch(rectangle -> world.getFoods()
                             .stream()
                             .anyMatch(f -> f.intersects(rectangle)))) {
                 return Optional.empty();
             }
             //если рядом есть наиболее пахучий квадрат идет туда
-            Optional<Rectangle> m = getMaxAttractivePosition(possibleNextPositions, currentPosition);
-            if (m.isPresent()) {
-                return m;
+            val mostSmelly = getMaxAttractivePosition(possibleNextPositions, currentPosition);
+            if (mostSmelly.isPresent()) {
+                return mostSmelly;
             }
             //иначе идем в случайном направлении
-            int index = World.random.ints(0, possibleNextPositions.size()).findAny().getAsInt();
+            int index = random.ints(0, possibleNextPositions.size()).findAny().getAsInt();
             return Optional.of(possibleNextPositions.get(index));
         }
     }
@@ -113,16 +114,16 @@ public class Ant extends Rectangle implements Entity {
         Optional<Rectangle> r = Optional.empty();
         int value = 0;
         for (Rectangle rectangle : list) {
-                Integer marked = world.getMarkedAreas()
-                        .entrySet()
-                        .stream()
-                        .filter(entry -> entry.getKey().intersects(rectangle) && entry.getValue() > 0)
-                        .map(Map.Entry::getValue)
-                        .max(Comparator.comparingInt(Integer::intValue))
-                        .orElse(0);
-                if (marked > value) {
-                    r = Optional.of(rectangle);
-                }
+            Integer marked = world.getMarkedAreas()
+                    .entrySet()
+                    .stream()
+                    .filter(entry -> entry.getKey().intersects(rectangle) && entry.getValue() > 0)
+                    .map(Map.Entry::getValue)
+                    .max(Comparator.comparingInt(Integer::intValue))
+                    .orElse(0);
+            if (marked > value) {
+                r = Optional.of(rectangle);
+            }
         }
         return r;
     }
@@ -150,26 +151,26 @@ public class Ant extends Rectangle implements Entity {
         );
 
         return result.stream()
-                .filter(r -> !currentPosition.intersects(r))
+                .filter(rectangle -> !currentPosition.intersects(rectangle))
 //                .filter(r -> !antHome.intersects(r))
-                .filter(r -> world.isInWorld(r.x, r.y))
+                .filter(rectangle -> world.isInWorld(rectangle.x, rectangle.y))
                 .collect(Collectors.toList()); //убираем из коллекции квадраты, откуда мы пришли сюда
     }
 
     private void takeFood(Rectangle currentPosition) {
         //поднимаем кусок еды и стираем его из мира
-        world.getEntities().get(Food.class)
+        world.getFoods()
                 .stream()
-                .filter(f -> getAroundArea(currentPosition).stream().anyMatch(r -> r.intersects(f.getBounds2D())))
+                .filter(food -> getAroundArea(currentPosition).stream().anyMatch(r -> r.intersects(food.getBounds2D())))
                 .findFirst()
-                .ifPresent(f -> {
-                    int foods = ((Food) f).getFoodCount();
+                .ifPresent(food -> {
+                    int foods = food.getFoodCount();
                     if (foods > 0) {
-                        ((Food) f).takeOnePeace();
+                        food.takeOnePeace();
                     } else {
-                        world.getEntities().get(Food.class).remove(f);
+                        world.getFoods().remove(food);
                     }
-                    getAroundArea(f.getBounds()).forEach(this::markPosition);
+                    getAroundArea(food.getBounds()).forEach(this::markPosition);
                 });
         //помечаем себя как мы с едой
         withFood = true;

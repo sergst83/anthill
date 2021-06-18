@@ -24,6 +24,8 @@ public final class Constants {
     public static final int entityWidth = 5;
     public static final int entityHeight = 5;
 
+    public static final Dimension entityDimension = new Dimension(entityWidth, entityHeight);
+
     public static final int foodsPerAntMultiplier = 5;
     public static final int foodPointsCount = 5;
 

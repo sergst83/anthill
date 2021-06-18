@@ -10,6 +10,10 @@ public class AntHome extends Rectangle implements Entity {
         super(x, y, width, height);
     }
 
+    public AntHome(final Point point, final Dimension dimension) {
+        super(point, dimension);
+    }
+
     @Override
     public void compute() {
     }
