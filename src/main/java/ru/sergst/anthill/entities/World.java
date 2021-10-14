@@ -2,36 +2,25 @@ package ru.sergst.anthill.entities;
 
 import lombok.Getter;
 import lombok.val;
-import ru.sergst.anthill.config.Constants;
 
+import javax.swing.Timer;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.Rectangle2D;
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
+import java.util.*;
 
+import static java.lang.Math.max;
 import static java.util.stream.Collectors.toList;
+import static ru.sergst.anthill.Util.nextInt;
 import static ru.sergst.anthill.config.Constants.*;
 
 @Getter
 public class World extends JPanel implements ActionListener {
 
-    private final Timer timer = new Timer(delay, this);
-
-    public static final Random random = new SecureRandom();
+    private final Timer timer = new Timer(DELAY, this);
 
     private final Set<Food> foods = new HashSet<>();
     private final Set<Ant> ants = new HashSet<>();
@@ -51,25 +40,24 @@ public class World extends JPanel implements ActionListener {
         setFocusable(true);
 
         initAntHome();
-        for (int i = 0; i < foodPointsCount; i++) {
+        for (int i = 0; i < FOOD_POINTS_COUNT; i++) {
             initFood();
         }
         initNewAnt();
     }
 
     private void initAntHome() {
-        Point point = getRandomPont();
         //создаем муравейник
-        antHomes.add(new AntHome(point, entityDimension));
+        antHomes.add(new AntHome(getRandomPont(), ENTITY_DIMENSION));
     }
 
     private void initFood() {
-        Point point = getRandomPont();
+        val point = getRandomPont();
         Food food;
         do {
-            food = new Food(point.x, point.y, entityWidth, entityHeight);
+            food = new Food(point.x, point.y, ENTITY_WIDTH, ENTITY_HEIGHT);
         } while (isEntitiesIntersects(food));
-        for (int i = 0; i < maxAntCount * foodsPerAntMultiplier; i++) {
+        for (int i = 0; i < MAX_ANT_COUNT * FOODS_PER_ANT_MULTIPLIER; i++) {
             foods.add(food);
         }
     }
@@ -81,42 +69,54 @@ public class World extends JPanel implements ActionListener {
     }
 
     private Point getRandomPont() {
-        int x = random.ints(1, WORLD_WIDTH - entityWidth).findAny().getAsInt();
-        int y = random.ints(1, WORLD_HEIGHT - entityHeight).findAny().getAsInt();
-
-        return new Point(x, y);
+        return new Point(
+                nextInt(1, WORLD_WIDTH - ENTITY_WIDTH),
+                nextInt(1, WORLD_HEIGHT - ENTITY_HEIGHT)
+        );
     }
 
     private void computeWorldTick() {
-        if (!foods.isEmpty() && ants.size() < maxAntCount) {
+        if (!foods.isEmpty() && ants.size() < MAX_ANT_COUNT) {
             initNewAnt();
         }
 
         //получаем список муравьев возле норки с едой
         val antsToRemove = ants.stream()
-                .filter(ant -> ant.getBounds().intersects(getAntHome()))
-                .filter(ant -> ((Ant)ant).isWithFood())
+                .filter(ant -> ant.intersects(getAntHome()))
+                .filter(Ant::isWithFood)
                 .collect(toList());
         //удаляем муравьев принесших еду с поля и увеличиваем счетчик еды
         antsToRemove.forEach(ants::remove);
-        collectedFoods += antsToRemove.size();
-        System.out.println("Collected foods: " + collectedFoods);
+        incrementCollectedFood(antsToRemove.size());
 
         ants.forEach(Entity::compute);
         foods.forEach(Entity::compute);
         antHomes.forEach(Entity::compute);
 
-        //испарение ферромона
+        pheromoneEvaporation();
+    }
+
+    /**
+     * Испарение феромона
+     */
+    private void pheromoneEvaporation() {
         if (!markedAreas.isEmpty()) {
-            val keys = new ArrayList<>(markedAreas.keySet());
-            for (Rectangle key : keys) {
-                int v = Math.max(markedAreas.get(key) - markRemovePerTick, 0);
-                if (v == 0) {
-                    markedAreas.remove(key);
+            val markedRectangles = new ArrayList<>(markedAreas.keySet());
+            for (Rectangle markedRectangle : markedRectangles) {
+                int brightness = max(markedAreas.get(markedRectangle) - MARK_REMOVE_PER_TICK, 0);
+                if (brightness == 0) {
+                    markedAreas.remove(markedRectangle); //если все испарилось, удаляем из помеченных
                 } else {
-                    markedAreas.put(key, v);
+                    markedAreas.put(markedRectangle, brightness);
                 }
             }
+        }
+    }
+
+    private void incrementCollectedFood(final int foodCount) {
+        if (foodCount > 0) {
+            collectedFoods += foodCount;
+            System.out.println("Collected foods: " + collectedFoods);
         }
     }
 
@@ -131,29 +131,39 @@ public class World extends JPanel implements ActionListener {
     }
 
     @Override
-    public void paint(Graphics g) {
-        g.clearRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-        g.setColor(Constants.backGround);
-        g.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    public void paint(final Graphics graphics) {
+        graphics.clearRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+        graphics.setColor(BACKGROUND_COLOR);
+        graphics.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
-        markedAreas.forEach((k, v) -> {
-            int b = 200 - (255 * v) / maxMarkWaight;
-            if (b > 255) {
-                b = 255;
-            } else if (b < 0) {
-                b = 0;
-            }
-            Color color = new Color(255, 255, b); //градауии желтого
-            g.setColor(color);
-            g.fillRect(k.x, k.y, k.width, k.height);
+        markedAreas.forEach((rectangle, brightness) -> {
+            graphics.setColor(calcMarkedRectangleColor(brightness));
+            graphics.fillRect(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
         });
 
-        ants.forEach(evtity -> evtity.draw(g));
-        foods.forEach(evtity -> evtity.draw(g));
-        antHomes.forEach(evtity -> evtity.draw(g));
+        ants.forEach(entity -> entity.draw(graphics));
+        foods.forEach(entity -> entity.draw(graphics));
+        antHomes.forEach(entity -> entity.draw(graphics));
     }
 
-    public boolean isInWorld(int x, int y) {
+    /**
+     * Вычисление цвета, помеченной феромоном, ячейки
+     *
+     * @param brightness яркость компонента
+     * @return цвет
+     */
+    private Color calcMarkedRectangleColor(final int brightness) {
+        int blue = 200 - (255 * brightness) / MAX_MARK_WEIGHT;
+        if (blue > 255) {
+            blue = 255;
+        } else if (blue < 0) {
+            blue = 0;
+        }
+
+        return new Color(255, 255, blue); //градации желтого
+    }
+
+    public boolean isInWorld(final int x, final int y) {
         return x > 0 && x < WORLD_WIDTH && y > 0 && y < WORLD_HEIGHT;
     }
 

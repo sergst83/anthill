@@ -20,7 +20,7 @@ public class AntHome extends Rectangle implements Entity {
 
     @Override
     public void draw(Graphics graphics) {
-        graphics.setColor(Constants.antHomeColor);
+        graphics.setColor(Constants.ANT_HOME_COLOR);
         graphics.fillRect(x, y, width, height);
     }
 }
