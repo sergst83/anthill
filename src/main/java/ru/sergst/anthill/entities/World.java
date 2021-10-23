@@ -14,7 +14,7 @@ import java.util.*;
 
 import static java.lang.Math.max;
 import static java.util.stream.Collectors.toList;
-import static ru.sergst.anthill.Util.nextInt;
+import static ru.sergst.anthill.Util.getRandomPont;
 import static ru.sergst.anthill.config.Constants.*;
 
 @Getter
@@ -66,13 +66,6 @@ public class World extends JPanel implements ActionListener {
         return foods.stream().anyMatch(food -> food.intersects((Rectangle2D) entity))
                 || antHomes.stream().anyMatch(antHome -> antHome.intersects((Rectangle2D) entity))
                 || ants.stream().anyMatch(ant -> ant.intersects((Rectangle2D) entity));
-    }
-
-    private Point getRandomPont() {
-        return new Point(
-                nextInt(1, WORLD_WIDTH - ENTITY_WIDTH),
-                nextInt(1, WORLD_HEIGHT - ENTITY_HEIGHT)
-        );
     }
 
     private void computeWorldTick() {
