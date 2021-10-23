@@ -13,8 +13,8 @@ public class Food extends Rectangle implements Entity {
 
     private int foodCount = MAX_ANT_COUNT * FOODS_PER_ANT_MULTIPLIER;
 
-    public Food(final int x, final int y, final int width, final int height) {
-        super(x, y, width, height);
+    public Food(final  Point point, final Dimension dimension) {
+        super(point, dimension);
     }
 
     @Override

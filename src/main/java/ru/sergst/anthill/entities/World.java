@@ -55,7 +55,7 @@ public class World extends JPanel implements ActionListener {
         val point = getRandomPont();
         Food food;
         do {
-            food = new Food(point.x, point.y, ENTITY_WIDTH, ENTITY_HEIGHT);
+            food = new Food(point, ENTITY_DIMENSION);
         } while (isEntitiesIntersects(food));
         for (int i = 0; i < MAX_ANT_COUNT * FOODS_PER_ANT_MULTIPLIER; i++) {
             foods.add(food);
@@ -84,6 +84,7 @@ public class World extends JPanel implements ActionListener {
         val antsToRemove = ants.stream()
                 .filter(ant -> ant.intersects(getAntHome()))
                 .filter(Ant::isWithFood)
+                .peek(ant -> System.out.printf("%s brought food\n", ant))
                 .collect(toList());
         //удаляем муравьев принесших еду с поля и увеличиваем счетчик еды
         antsToRemove.forEach(ants::remove);
@@ -122,8 +123,8 @@ public class World extends JPanel implements ActionListener {
 
     private void initNewAnt() {
         val newAnt = new Ant(getAntHome(), this);
-        System.out.println(newAnt);
         ants.add(newAnt);
+        System.out.printf("%s came out of the burrow\n", newAnt);
     }
 
     private AntHome getAntHome() {

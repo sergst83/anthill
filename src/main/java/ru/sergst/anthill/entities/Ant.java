@@ -3,6 +3,7 @@ package ru.sergst.anthill.entities;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.ToString.Include;
 import lombok.val;
 
 import java.awt.*;
@@ -10,13 +11,15 @@ import java.util.List;
 import java.util.*;
 import java.util.function.BiPredicate;
 
+import static java.lang.Integer.MAX_VALUE;
 import static java.util.Arrays.asList;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
 import static ru.sergst.anthill.Util.nextInt;
+import static ru.sergst.anthill.Util.random;
 import static ru.sergst.anthill.config.Constants.*;
 
-@ToString
+@ToString(onlyExplicitlyIncluded = true)
 @Getter
 public class Ant extends Rectangle implements Entity {
 
@@ -35,14 +38,16 @@ public class Ant extends Rectangle implements Entity {
     private boolean withFood = false;
     private final AntHome antHome;
     private final int pathLength = 1;
-
+    @Include
+    private final String antName;
 
     public Ant(AntHome antHome, World world) {
-        super(antHome.x, antHome.y, antHome.width, antHome.height);
+        super(antHome.getLocation(), antHome.getSize());
         path = new LinkedList<>();
         path.push(antHome);
         this.world = world;
         this.antHome = antHome;
+        this.antName = String.valueOf(nextInt(1, MAX_VALUE));
     }
 
     @Override

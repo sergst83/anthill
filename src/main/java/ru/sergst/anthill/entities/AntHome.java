@@ -1,14 +1,10 @@
 package ru.sergst.anthill.entities;
 
-import ru.sergst.anthill.config.Constants;
-
 import java.awt.*;
 
-public class AntHome extends Rectangle implements Entity {
+import static ru.sergst.anthill.config.Constants.ANT_HOME_COLOR;
 
-    public AntHome(int x, int y, int width, int height) {
-        super(x, y, width, height);
-    }
+public class AntHome extends Rectangle implements Entity {
 
     public AntHome(final Point point, final Dimension dimension) {
         super(point, dimension);
@@ -20,7 +16,7 @@ public class AntHome extends Rectangle implements Entity {
 
     @Override
     public void draw(Graphics graphics) {
-        graphics.setColor(Constants.ANT_HOME_COLOR);
+        graphics.setColor(ANT_HOME_COLOR);
         graphics.fillRect(x, y, width, height);
     }
 }
