@@ -103,7 +103,7 @@ public class World extends JPanel implements ActionListener {
         if (!markedAreas.isEmpty()) {
             val markedRectangles = new ArrayList<>(markedAreas.keySet());
             for (Rectangle markedRectangle : markedRectangles) {
-                int brightness = max(markedAreas.get(markedRectangle) - MARK_REMOVE_PER_TICK, 0);
+                int brightness = max(MARK_REMOVE_FUNCTION.apply(markedAreas.get(markedRectangle)), 0);
                 if (brightness == 0) {
                     markedAreas.remove(markedRectangle); //если все испарилось, удаляем из помеченных
                 } else {

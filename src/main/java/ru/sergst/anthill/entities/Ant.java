@@ -12,7 +12,6 @@ import java.util.function.BiPredicate;
 
 import static java.util.Arrays.asList;
 import static java.util.Comparator.comparing;
-import static java.util.Comparator.comparingInt;
 import static java.util.stream.Collectors.toList;
 import static ru.sergst.anthill.Util.nextInt;
 import static ru.sergst.anthill.config.Constants.*;
@@ -118,7 +117,7 @@ public class Ant extends Rectangle implements Entity {
                 .filter(
                         position -> world.getMarkedAreas().entrySet().stream()
                                 .anyMatch(entry -> entry.getKey().intersects(position))
-                ).findAny();
+                ).max(comparing(position -> antHome.getLocation().distance(position.getLocation())));
     }
 
     private void markPosition(Rectangle position) {
@@ -173,7 +172,7 @@ public class Ant extends Rectangle implements Entity {
     private void takeFood(Rectangle currentPosition) {
         world.getFoods()
                 .stream()
-                .filter(food -> getAroundArea(currentPosition).stream().anyMatch(r -> r.intersects(food.getBounds2D())))
+                .filter(food -> getAroundArea(currentPosition).stream().anyMatch(r -> r.intersects(food)))
                 .findFirst()
                 .ifPresent(food -> {
                     if (food.getFoodCount() > 0) {
@@ -181,7 +180,7 @@ public class Ant extends Rectangle implements Entity {
                     } else {
                         world.getFoods().remove(food);
                     }
-                    getAroundArea(food.getBounds()).forEach(this::markPosition);
+                    getAroundArea(food).forEach(this::markPosition);
                 });
         withFood = true; //помечаем себя как мы с едой
         path = shortPathToHome(currentPosition);

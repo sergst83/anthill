@@ -3,6 +3,8 @@ package ru.sergst.anthill.config;
 import lombok.experimental.UtilityClass;
 
 import java.awt.*;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static java.awt.Color.*;
 
@@ -31,7 +33,10 @@ public final class Constants {
     public static final int FOODS_PER_ANT_MULTIPLIER = 5;
     public static final int FOOD_POINTS_COUNT = 5;
 
-    public static final int MARK_REMOVE_PER_TICK = 1;
+    public static final int MARK_REMOVE_PER_TICK_PERCENT = 1;
     public static final int MARK_WEIGHT = 255;
     public static final int MAX_MARK_WEIGHT = MARK_WEIGHT * MAX_ANT_COUNT;
+
+    public static final Function<Integer, Integer> MARK_REMOVE_FUNCTION =
+            value -> (int) (value.doubleValue() - MARK_REMOVE_PER_TICK_PERCENT * value.doubleValue() / 100);
 }
