@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.*;
 
 import static java.lang.Math.max;
-import static java.util.stream.Collectors.toList;
 import static ru.sergst.anthill.Util.getRandomPont;
 import static ru.sergst.anthill.config.Constants.*;
 
@@ -78,7 +77,7 @@ public class World extends JPanel implements ActionListener {
                 .filter(ant -> ant.intersects(getAntHome()))
                 .filter(Ant::isWithFood)
                 .peek(ant -> System.out.printf("%s brought food\n", ant))
-                .collect(toList());
+                .toList();
         //удаляем муравьев принесших еду с поля и увеличиваем счетчик еды
         antsToRemove.forEach(ants::remove);
         incrementCollectedFood(antsToRemove.size());
@@ -88,6 +87,11 @@ public class World extends JPanel implements ActionListener {
         antHomes.forEach(Entity::compute);
 
         pheromoneEvaporation();
+
+        if (foods.isEmpty() && ants.stream().noneMatch(Ant::isWithFood)) {
+            System.out.printf("Collected all foods: %s. Exit!\n", collectedFoods);
+            timer.stop();
+        }
     }
 
     /**
