@@ -16,7 +16,6 @@ import static java.util.Arrays.asList;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
 import static ru.sergst.anthill.Util.nextInt;
-import static ru.sergst.anthill.Util.random;
 import static ru.sergst.anthill.config.Constants.*;
 
 @ToString(onlyExplicitlyIncluded = true)

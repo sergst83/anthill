@@ -12,6 +12,7 @@ public class AntHome extends Rectangle implements Entity {
 
     @Override
     public void compute() {
+        //do nothing
     }
 
     @Override
