@@ -87,6 +87,11 @@ public class World extends JPanel implements ActionListener {
         antHomes.forEach(Entity::compute);
 
         pheromoneEvaporation();
+
+        if (foods.isEmpty() && ants.stream().noneMatch(Ant::isWithFood)) {
+            System.out.printf("Collected all foods: %s. Exit!\n", collectedFoods);
+            timer.stop();
+        }
     }
 
     /**
